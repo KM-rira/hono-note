@@ -66,7 +66,7 @@ app.get(`${honoNotePrefix}/`, (c) => {
     <body>
       <h1>Notes</h1>
 
-      <button onclick="location.href='${honoNotePrefix}/register'">
+      <button onclick="location.href='/hono-note/register'">
         新規登録
       </button>
 
@@ -76,7 +76,7 @@ app.get(`${honoNotePrefix}/`, (c) => {
 
       <script>
         async function loadList() {
-          const res = await fetch('${honoNotePrefix}/list');
+          const res = await fetch('/hono-note/list');
           const data = await res.json();
           console.log("result:",data)
 
@@ -90,7 +90,7 @@ app.get(`${honoNotePrefix}/`, (c) => {
               <h3>\${note.title}</h3>
               <small>Updated: \${note.updatedAt}</small>
               <small>Created: \${note.createdAt}</small>
-              <a href="${honoNotePrefix}/edit?id=\${note.id}">編集</a>
+              <a href="/hono-note/edit?id=\${note.id}">編集</a>
             \`;
             listDiv.appendChild(div);
           });
@@ -125,7 +125,7 @@ app.get(`${honoNotePrefix}/register`, (c) => {
 </form>
 
 <br />
-<a href="${honoNotePrefix}/">戻る</a>
+<a href="/hono-note/">戻る</a>
 
 <script>
 const form = document.getElementById('registerForm');
@@ -135,7 +135,7 @@ form.addEventListener('submit', async (e) => {
 
   const formData = new FormData(form);
 
-  const res = await fetch('${honoNotePrefix}/register', {
+  const res = await fetch('/hono-note/register', {
     method: 'POST',
     body: formData
   });
@@ -144,7 +144,7 @@ form.addEventListener('submit', async (e) => {
 
   if (data.success) {
     alert('✅ 登録成功');
-    window.location.href = '${honoNotePrefix}/';
+    window.location.href = '/hono-note/';
   } else {
     alert('❌ ' + (data.message || '登録失敗'));
   }
@@ -241,7 +241,7 @@ app.get(`${honoNotePrefix}/edit`, (c) => {
 </form>
 
 <br/>
-<a href="${honoNotePrefix}/">戻る</a>
+<a href="/hono-note/">戻る</a>
 
 <script>
 const form = document.getElementById('editForm');
@@ -251,7 +251,7 @@ form.addEventListener('submit', async (e) => {
 
   const formData = new FormData(form);
 
-  const res = await fetch('${honoNotePrefix}/update', {
+  const res = await fetch('/hono-note/update', {
     method: 'POST',
     body: formData
   });
@@ -260,7 +260,7 @@ form.addEventListener('submit', async (e) => {
 
   if (data.success) {
     alert('✅ 更新成功');
-    window.location.href = '${honoNotePrefix}/';
+    window.location.href = '/hono-note/';
   } else {
     alert('❌ ' + (data.message || '更新失敗'));
   }
