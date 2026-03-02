@@ -281,5 +281,8 @@ function doQuery<T = unknown>(sql: string, params: any[] = []): T {
         return { success: true } as T;
     }
 }
-
-export default app
+const port = Number(9010)
+export default {
+    port,
+    fetch: app.fetch
+}
