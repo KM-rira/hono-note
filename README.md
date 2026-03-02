@@ -9,3 +9,7 @@ bun run dev
 ```
 
 open http://localhost:3000
+
+## deploy in prd
+### remote-ssh
+bash prd-deploy.sh
