@@ -6,6 +6,7 @@ import { mkdirSync } from 'node:fs';
 
 const app = new Hono()
 
+const honoNotePrefix = '/hono-note'
 
 // このファイルの絶対パス基準
 const __dirname = dirname(import.meta.path);
@@ -44,11 +45,11 @@ type Note = {
     createdAt: string;
 }
 
-app.get('/health', (c) => {
+app.get(`${honoNotePrefix}/health`, (c) => {
     return c.text('Hello Hono!')
 })
 
-app.get('/', (c) => {
+app.get(`${honoNotePrefix}/`, (c) => {
     return c.html(`
     <!DOCTYPE html>
     <html>
@@ -64,7 +65,7 @@ app.get('/', (c) => {
     <body>
       <h1>Notes</h1>
 
-      <button onclick="location.href='/register'">
+      <button onclick="location.href='${honoNotePrefix}/register'">
         新規登録
       </button>
 
@@ -74,7 +75,7 @@ app.get('/', (c) => {
 
       <script>
         async function loadList() {
-          const res = await fetch('/list');
+          const res = await fetch('${honoNotePrefix}/list');
           const data = await res.json();
           console.log("result:",data)
 
@@ -88,7 +89,7 @@ app.get('/', (c) => {
               <h3>\${note.title}</h3>
               <small>Updated: \${note.updatedAt}</small>
               <small>Created: \${note.createdAt}</small>
-              <a href="/edit?id=\${note.id}">編集</a>
+              <a href="${honoNotePrefix}/edit?id=\${note.id}">編集</a>
             \`;
             listDiv.appendChild(div);
           });
@@ -101,7 +102,7 @@ app.get('/', (c) => {
   `);
 });
 
-app.get('/register', (c) => {
+app.get(`${honoNotePrefix}/register`, (c) => {
     return c.html(`
 <!DOCTYPE html>
 <html>
@@ -123,7 +124,7 @@ app.get('/register', (c) => {
 </form>
 
 <br />
-<a href="/">戻る</a>
+<a href="${honoNotePrefix}/">戻る</a>
 
 <script>
 const form = document.getElementById('registerForm');
@@ -133,7 +134,7 @@ form.addEventListener('submit', async (e) => {
 
   const formData = new FormData(form);
 
-  const res = await fetch('/register', {
+  const res = await fetch('${honoNotePrefix}/register', {
     method: 'POST',
     body: formData
   });
@@ -142,7 +143,7 @@ form.addEventListener('submit', async (e) => {
 
   if (data.success) {
     alert('✅ 登録成功');
-    window.location.href = '/';
+    window.location.href = '${honoNotePrefix}/';
   } else {
     alert('❌ ' + (data.message || '登録失敗'));
   }
@@ -154,12 +155,12 @@ form.addEventListener('submit', async (e) => {
   `);
 });
 
-app.get('/list', (c) => {
-    const res = doQuery(`SELECT * FROM ${tableName}`);
+app.get(`${honoNotePrefix}/list`, (c) => {
+    const res = doQuery(`SELECT * FROM ${tableName} ORDER BY updatedAt DESC`);
     return c.json(res);
 })
 
-app.post('/register', async (c) => {
+app.post(`${honoNotePrefix}/register`, async (c) => {
     try {
         const body = await c.req.parseBody();
         const now = new Date().toISOString();
@@ -180,18 +181,19 @@ app.post('/register', async (c) => {
     }
 });
 
-app.post('/update', async (c) => {
+app.post(`${honoNotePrefix}/update`, async (c) => {
     try {
         const body = await c.req.parseBody();
         const now = new Date().toISOString();
+        const id = Number(body.id)
 
-        if (!body.title || !body.body) {
+        if (!body.title || !body.body || !Number.isFinite(id)) {
             return c.json({ success: false, message: '入力不足です' }, 400);
         }
 
         doQuery(
             `UPDATE ${tableName} SET title = ?, body = ?, updatedAt = ? WHERE ID = ?`,
-            [body.title, body.body, now, body.id]
+            [body.title, body.body, now, id]
         );
 
         return c.json({ success: true });
@@ -200,7 +202,7 @@ app.post('/update', async (c) => {
     }
 });
 
-app.get('/edit', (c) => {
+app.get(`${honoNotePrefix}/edit`, (c) => {
     const idStr = c.req.query('id');
     const id = Number(idStr);
 
@@ -238,7 +240,7 @@ app.get('/edit', (c) => {
 </form>
 
 <br/>
-<a href="/">戻る</a>
+<a href="${honoNotePrefix}/">戻る</a>
 
 <script>
 const form = document.getElementById('editForm');
@@ -248,7 +250,7 @@ form.addEventListener('submit', async (e) => {
 
   const formData = new FormData(form);
 
-  const res = await fetch('/update', {
+  const res = await fetch('${honoNotePrefix}/update', {
     method: 'POST',
     body: formData
   });
@@ -257,7 +259,7 @@ form.addEventListener('submit', async (e) => {
 
   if (data.success) {
     alert('✅ 更新成功');
-    window.location.href = '/';
+    window.location.href = '${honoNotePrefix}/';
   } else {
     alert('❌ ' + (data.message || '更新失敗'));
   }
