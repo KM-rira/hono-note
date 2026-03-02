@@ -1,6 +1,7 @@
 // https://qiita.com/toshirot/items/06a992af8cf8aca9ff95
 import { Hono } from 'hono'
 import { Database } from "bun:sqlite";
+
 // データベースファイルの名前を指定
 const dbFileName = 'note.sqlite';
 // テーブルの名前を指定
@@ -12,6 +13,22 @@ let res = doQuery(`SELECT * FROM ${tableName}`);
 console.log(res);
 
 const app = new Hono()
+function escapeHtml(s: string): string {
+    return s
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+type Note = {
+    id: number;
+    title: string;
+    body: string;
+    updatedAt: string;
+    createdAt: string;
+}
 
 app.get('/helth', (c) => {
     return c.text('Hello Hono!')
@@ -57,6 +74,7 @@ app.get('/', (c) => {
               <h3>\${note.title}</h3>
               <small>Updated: \${note.updatedAt}</small>
               <small>Created: \${note.createdAt}</small>
+              <a href="/edit?id=\${note.id}">編集</a>
             \`;
             listDiv.appendChild(div);
           });
@@ -91,7 +109,7 @@ app.get('/register', (c) => {
 </form>
 
 <br />
-<a href="/index">戻る</a>
+<a href="/">戻る</a>
 
 <script>
 const form = document.getElementById('registerForm');
@@ -148,13 +166,105 @@ app.post('/register', async (c) => {
     }
 });
 
-function doQuery(sql: string, params: any[] = []): unknown {
+app.post('/update', async (c) => {
+    try {
+        const body = await c.req.parseBody();
+        const now = new Date().toISOString();
+
+        if (!body.title || !body.body) {
+            return c.json({ success: false, message: '入力不足です' }, 400);
+        }
+
+        doQuery(
+            `UPDATE ${tableName} SET title = ?, body = ?, updatedAt = ? WHERE ID = ?`,
+            [body.title, body.body, now, body.id]
+        );
+
+        return c.json({ success: true });
+    } catch (e) {
+        return c.json({ success: false, message: 'サーバーエラー' }, 500);
+    }
+});
+
+app.get('/edit', (c) => {
+    const idStr = c.req.query('id');
+    const id = Number(idStr);
+
+    if (!idStr || Number.isNaN(id)) {
+        return c.html('not found id', 400);
+    }
+
+    // ここで1件取る（doQueryはSELECTなら配列を返す前提）
+    const rows = doQuery(`SELECT * FROM ${tableName} WHERE id = ?`, [id]) as any[];
+    const note = rows[0];
+
+    if (!note) {
+        return c.html('note not found', 404);
+    }
+
+    return c.html(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Edit</title>
+</head>
+<body>
+<h1>編集 (id=${note.id})</h1>
+
+<form id="editForm">
+  <input type="hidden" name="id" value="${note.id}" />
+  <div>
+    <input name="title" placeholder="タイトル" value="${escapeHtml(note.title ?? '')}" />
+  </div>
+  <div>
+    <textarea name="body" placeholder="本文">${escapeHtml(note.body ?? '')}</textarea>
+  </div>
+  <button type="submit">更新</button>
+</form>
+
+<br/>
+<a href="/">戻る</a>
+
+<script>
+const form = document.getElementById('editForm');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const formData = new FormData(form);
+
+  const res = await fetch('/update', {
+    method: 'POST',
+    body: formData
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    alert('✅ 更新成功');
+    window.location.href = '/';
+  } else {
+    alert('❌ ' + (data.message || '更新失敗'));
+  }
+});
+
+</script>
+
+</body>
+</html>
+  `);
+});
+
+function doQuery<T = unknown>(sql: string, params: any[] = []): T {
     const query = db.query(sql);
-    if (sql.trim().toUpperCase().startsWith('SELECT')) {
-        return query.all(...params);
+    const isSelect = sql.trim().toUpperCase().startsWith('SELECT');
+
+    if (isSelect) {
+        return query.all(...params) as T;
     } else {
         query.run(...params);
-        return JSON.stringify({ success: true });
+        return { success: true } as T;
     }
 }
 
