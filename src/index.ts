@@ -49,6 +49,7 @@ app.get(`${honoNotePrefix}/health`, (c) => {
     return c.text('Hello Hono!')
 })
 
+app.get('/hono-note', (c) => c.redirect('/hono-note/'))
 app.get(`${honoNotePrefix}/`, (c) => {
     return c.html(`
     <!DOCTYPE html>
