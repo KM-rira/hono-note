@@ -1,18 +1,32 @@
 // https://qiita.com/toshirot/items/06a992af8cf8aca9ff95
 import { Hono } from 'hono'
 import { Database } from "bun:sqlite";
+import { dirname, join } from 'node:path';
+import { mkdirSync } from 'node:fs';
 
-// データベースファイルの名前を指定
-const dbFileName = 'note.sqlite';
+const app = new Hono()
+
+
+// このファイルの絶対パス基準
+const __dirname = dirname(import.meta.path);
+
+// hono-note/db/note.sqlite
+const dbDir = join(__dirname, "..", "db");
+const dbPath = join(dbDir, "note.sqlite");
+
+mkdirSync(dbDir, { recursive: true });
+console.log("Useing DB:", dbPath);
+
+// 新しいデータベースインスタンスを作成し、ファイルが存在しない場合はデータベースファイルを作成
+const db = new Database(dbPath, { create: true });
+
 // テーブルの名前を指定
 const tableName = 'notes';
-// 新しいデータベースインスタンスを作成し、ファイルが存在しない場合はデータベースファイルを作成
-const db = new Database(dbFileName, { create: true });
-doQuery(`CREATE TABLE IF NOT EXISTS ${tableName} (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, body TEXT, updatedAt TIMESTAMP, createdAt TIMESTAMP)`);
+
+doQuery(`CREATE TABLE IF NOT EXISTS ${tableName} (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, body TEXT, updatedAt TEXT, createdAt TEXT)`);
 let res = doQuery(`SELECT * FROM ${tableName}`);
 console.log(res);
 
-const app = new Hono()
 function escapeHtml(s: string): string {
     return s
         .replaceAll('&', '&amp;')
@@ -30,7 +44,7 @@ type Note = {
     createdAt: string;
 }
 
-app.get('/helth', (c) => {
+app.get('/health', (c) => {
     return c.text('Hello Hono!')
 })
 
