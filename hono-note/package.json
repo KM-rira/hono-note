@@ -1,0 +1,13 @@
+{
+  "name": "hono-note",
+  "scripts": {
+    "dev": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "hono": "^4.12.2"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
+
