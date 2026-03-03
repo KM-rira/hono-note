@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { Database } from "bun:sqlite";
 import { dirname, join } from 'node:path';
 import { mkdirSync } from 'node:fs';
+import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
 
 const app = new Hono()
 
@@ -50,7 +51,7 @@ app.get(`${honoNotePrefix}/health`, (c) => {
 })
 
 app.get('/hono-note', (c) => c.redirect('/hono-note/'))
-app.get(`${honoNotePrefix}/`, (c) => {
+app.get(`${honoNotePrefix}/`, requireAuth, (c) => {
     return c.html(`
     <!DOCTYPE html>
     <html>
@@ -65,6 +66,7 @@ app.get(`${honoNotePrefix}/`, (c) => {
     </head>
     <body>
       <h1>Notes</h1>
+      <a href="/hono-note/logout">ログアウト</a>
 
       <button onclick="location.href='/hono-note/register'">
         新規登録
@@ -103,7 +105,7 @@ app.get(`${honoNotePrefix}/`, (c) => {
   `);
 });
 
-app.get(`${honoNotePrefix}/register`, (c) => {
+app.get(`${honoNotePrefix}/register`, requireAuth, (c) => {
     return c.html(`
 <!DOCTYPE html>
 <html>
@@ -156,12 +158,12 @@ form.addEventListener('submit', async (e) => {
   `);
 });
 
-app.get(`${honoNotePrefix}/list`, (c) => {
+app.get(`${honoNotePrefix}/list`, requireAuth, (c) => {
     const res = doQuery(`SELECT * FROM ${tableName} ORDER BY updatedAt DESC`);
     return c.json(res);
 })
 
-app.post(`${honoNotePrefix}/register`, async (c) => {
+app.post(`${honoNotePrefix}/register`, requireAuth, async (c) => {
     try {
         const body = await c.req.parseBody();
         const now = new Date().toISOString();
@@ -182,7 +184,7 @@ app.post(`${honoNotePrefix}/register`, async (c) => {
     }
 });
 
-app.post(`${honoNotePrefix}/update`, async (c) => {
+app.post(`${honoNotePrefix}/update`, requireAuth, async (c) => {
     try {
         const body = await c.req.parseBody();
         const now = new Date().toISOString();
@@ -203,7 +205,7 @@ app.post(`${honoNotePrefix}/update`, async (c) => {
     }
 });
 
-app.get(`${honoNotePrefix}/edit`, (c) => {
+app.get(`${honoNotePrefix}/edit`, requireAuth, (c) => {
     const idStr = c.req.query('id');
     const id = Number(idStr);
 
@@ -273,6 +275,58 @@ form.addEventListener('submit', async (e) => {
   `);
 });
 
+app.get(`${honoNotePrefix}/login`, (c) => {
+    return c.html(`
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Login</title>
+  </head>
+  <body>
+    <h1>ログイン</h1>
+
+    <form method="post" action="/hono-note/login">
+      <div>
+        <input name="username" placeholder="ユーザー名" />
+      </div>
+      <div>
+        <input type="password" name="password" placeholder="パスワード" />
+      </div>
+      <button type="submit">ログイン</button>
+    </form>
+
+  </body>
+  </html>
+  `);
+});
+
+app.post(`${honoNotePrefix}/login`, async (c) => {
+    const body = await c.req.parseBody();
+    const username = body.username?.toString();
+    const password = body.password?.toString();
+
+    // 環境変数がなければデフォルト値
+    const authUser = process.env.AUTH_USERNAME ?? 'admin';
+    const authPass = process.env.AUTH_PASSWORD ?? 'password';
+
+    if (username === authUser && password === authPass) {
+        setCookie(c, 'session', 'ok', {
+            httpOnly: true,
+            path: '/',
+        });
+
+        return c.redirect('/hono-note/');
+    }
+
+    return c.html('ログイン失敗', 401);
+});
+
+app.get(`${honoNotePrefix}/logout`, (c) => {
+    deleteCookie(c, 'session');
+    return c.redirect('/hono-note/login');
+});
+
 function doQuery<T = unknown>(sql: string, params: any[] = []): T {
     const query = db.query(sql);
     const isSelect = sql.trim().toUpperCase().startsWith('SELECT');
@@ -288,4 +342,12 @@ const port = Number(9010)
 export default {
     port,
     fetch: app.fetch
+}
+
+function requireAuth(c: any, next: any) {
+    const session = getCookie(c, 'session');
+    if (session === 'ok') {
+        return next();
+    }
+    return c.redirect('/hono-note/login');
 }
