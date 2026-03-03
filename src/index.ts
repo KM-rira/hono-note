@@ -302,6 +302,10 @@ app.get(`${honoNotePrefix}/login`, (c) => {
 });
 
 app.post(`${honoNotePrefix}/login`, async (c) => {
+    console.log("ENV CHECK", {
+        bunUser: Bun.env.AUTH_USERNAME,
+        procUser: process.env.AUTH_USERNAME,
+    });
     const body = await c.req.parseBody();
     const username = body.username?.toString();
     const password = body.password?.toString();
