@@ -1,10 +1,11 @@
 // https://qiita.com/toshirot/items/06a992af8cf8aca9ff95
-import { Hono } from 'hono'
+import { Hono } from 'hono';
 import { Database } from "bun:sqlite";
 import { dirname, join, extname } from 'node:path';
-import { mkdirSync } from 'node:fs';
-import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
-import { writeFile, mkdir } from 'node:fs/promises'
+import { mkdirSync, createReadStream, existsSync } from 'node:fs';
+import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
+import { writeFile } from 'node:fs/promises';
+import { lookup } from "mime-types";
 
 const app = new Hono()
 
@@ -141,7 +142,7 @@ app.get(`${honoNotePrefix}/`, requireAuth, (c: any) => {
         div.innerHTML = \`
           <strong>\${file.originalFileName}</strong><br />
           <small>Created: \${file.createdAt}</small><br />
-          <a href="/hono-note/download?id=\${encodeURIComponent(file.id)}">ダウンロード</a>
+        <a href="/hono-note/download?id=\${file.id}">ダウンロード</a>
         \`;
         fileListDiv.appendChild(div);
       });
@@ -281,6 +282,37 @@ app.get(`${honoNotePrefix}/note/list`, requireAuth, (c: any) => {
 app.get(`${honoNotePrefix}/file/list`, requireAuth, (c: any) => {
     const res = doQuery(`SELECT * FROM ${filesTable} ORDER BY updatedAt DESC`);
     return c.json(res);
+})
+
+app.get(`${honoNotePrefix}/download`, requireAuth, (c: any) => {
+    const idStr = c.req.query('id');
+    const id = Number(idStr);
+
+    if (!idStr || Number.isNaN(id)) {
+        return c.html('not found id', 400);
+    }
+
+    // ここで1件取る（doQueryはSELECTなら配列を返す前提）
+    const rows = doQuery(`SELECT * FROM ${filesTable} WHERE id = ?`, [id]) as any[];
+    if (!rows || rows.length === 0) return c.text("File not found", 404);
+    const file = rows[0];
+    const filesDir = join(__dirname, "..", "uploadFiles");
+    const saveFilePath = join(filesDir, String(file.saveFileName));
+
+    if (!existsSync(saveFilePath)) {
+        return c.text("file missing on server", 404)
+    }
+
+    const stream = createReadStream(saveFilePath);
+    const name = String(file.originalFileName ?? "download.bin");
+    const encoded = encodeURIComponent(name);
+    const guessed = lookup(name)
+    const contentType = typeof guessed === "string" ? guessed : "application/octet-stream"
+
+    c.header("Content-Type", contentType);
+    c.header("Content-Disposition", `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`);
+
+    return c.body(stream as any);
 })
 
 app.post(`${honoNotePrefix}/register`, requireAuth, async (c: any) => {
