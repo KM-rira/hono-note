@@ -2,10 +2,14 @@
 import { Hono } from 'hono';
 import { Database } from "bun:sqlite";
 import { dirname, join, extname } from 'node:path';
-import { mkdirSync, createReadStream, existsSync } from 'node:fs';
+import { mkdirSync, createReadStream, existsSync, createWriteStream } from 'node:fs';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
-import { writeFile } from 'node:fs/promises';
 import { lookup } from "mime-types";
+import { createGunzip, createGzip } from "zlib";
+import { PassThrough } from "stream";
+import { pipeline } from "stream/promises";
+const compressibleExt = new Set([".txt", ".md", ".json", ".csv", ".log", ".html", ".css", ".js", ".ts", ".xml",
+]);
 
 const app = new Hono()
 
@@ -199,13 +203,21 @@ app.post(`${honoNotePrefix}/upload`, requireAuth, async (c: any) => {
     console.log(`file size: ${file.size} bytes`)
 
     const uuid = crypto.randomUUID();
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    const extention = extname(file.name)
-    const saveFileName = `${uuid}${extention}`
+    const extention = extname(file.name).toLowerCase();
+    const shouldCompress = compressibleExt.has(extention) && file.size >= 1024;
+    const saveFileName = `${uuid}${extention}.gz`
     const uploadFilePath = join(filesDir, saveFileName)
-    await writeFile(uploadFilePath, buffer)
-    console.log("uploadFilePath :", uploadFilePath)
+    const inStream = (file as any).stream();
+    const { Readable } = await import("stream");
+    const nodeReadable = Readable.fromWeb(inStream)
+    console.log({ name: file.name, ext: extention, size: file.size, shouldCompress });
+    if (shouldCompress) {
+        const gzip = createGzip({ level: 6 })
+        await pipeline(nodeReadable, gzip, createWriteStream(uploadFilePath));
+    } else {
+        await pipeline(nodeReadable, createWriteStream(uploadFilePath));
+    }
+
 
     doQuery(
         `INSERT INTO ${filesTable} (saveFileName, originalFileName,  updatedAt, createdAt)
@@ -216,7 +228,8 @@ app.post(`${honoNotePrefix}/upload`, requireAuth, async (c: any) => {
     return c.json({
         message: 'success',
         filename: file.name,
-        size: file.size
+        size: file.size,
+        compressed: shouldCompress,
     })
 });
 
@@ -278,7 +291,6 @@ app.get(`${honoNotePrefix}/note/list`, requireAuth, (c: any) => {
     return c.json(res);
 })
 
-
 app.get(`${honoNotePrefix}/file/list`, requireAuth, (c: any) => {
     const res = doQuery(`SELECT * FROM ${filesTable} ORDER BY updatedAt DESC`);
     return c.json(res);
@@ -304,13 +316,30 @@ app.get(`${honoNotePrefix}/download`, requireAuth, (c: any) => {
     }
 
     const stream = createReadStream(saveFilePath);
-    const name = String(file.originalFileName ?? "download.bin");
-    const encoded = encodeURIComponent(name);
-    const guessed = lookup(name)
+    const originalName = String(file.originalFileName ?? "download.bin");
+    const encoded = encodeURIComponent(originalName);
+    const guessed = lookup(originalName)
     const contentType = typeof guessed === "string" ? guessed : "application/octet-stream"
 
     c.header("Content-Type", contentType);
     c.header("Content-Disposition", `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`);
+
+    const isCompressed = String(file.saveFileName).endsWith(".gz");
+    const src = createReadStream(saveFilePath);
+
+    if (!isCompressed) {
+        return c.body(src as any);
+    }
+
+    const gunzip = createGunzip();
+    const out = new PassThrough();
+
+    pipeline(src, gunzip, out, (err) => {
+        if (err) {
+            console.error("gunzip error:", err);
+            out.destroy(err);
+        }
+    });
 
     return c.body(stream as any);
 })
