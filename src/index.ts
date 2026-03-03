@@ -1,9 +1,10 @@
 // https://qiita.com/toshirot/items/06a992af8cf8aca9ff95
 import { Hono } from 'hono'
 import { Database } from "bun:sqlite";
-import { dirname, join } from 'node:path';
+import { dirname, join, extname } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
+import { writeFile, mkdir } from 'node:fs/promises'
 
 const app = new Hono()
 
@@ -15,19 +16,28 @@ const __dirname = dirname(import.meta.path);
 // hono-note/db/note.sqlite
 const dbDir = join(__dirname, "..", "db");
 const dbPath = join(dbDir, "note.sqlite");
+const filesDir = join(__dirname, "..", "uploadFiles");
 
 mkdirSync(dbDir, { recursive: true });
 console.log("Useing DB:", dbPath);
+mkdirSync(filesDir, { recursive: true });
+console.log("Files Dir:", filesDir);
 
 // 新しいデータベースインスタンスを作成し、ファイルが存在しない場合はデータベースファイルを作成
 const db = new Database(dbPath, { create: true });
 
 // テーブルの名前を指定
-const tableName = 'notes';
+const notesTable = 'notes';
+const filesTable = 'files';
 
-doQuery(`CREATE TABLE IF NOT EXISTS ${tableName} (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, body TEXT, updatedAt TEXT, createdAt TEXT)`);
-let res = doQuery(`SELECT * FROM ${tableName}`);
-console.log(res);
+doQuery(`CREATE TABLE IF NOT EXISTS ${notesTable} (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, body TEXT, updatedAt TEXT, createdAt TEXT)`);
+doQuery(`CREATE TABLE IF NOT EXISTS ${filesTable} (id INTEGER PRIMARY KEY AUTOINCREMENT, saveFileName TEXT, originalFileName TEXT, updatedAt TEXT, createdAt TEXT)`);
+let resNotes = doQuery(`SELECT * FROM ${notesTable}`);
+console.log("Notes:");
+console.log(resNotes);
+let resFiles = doQuery(`SELECT * FROM ${filesTable}`);
+console.log("Files:");
+console.log(resFiles);
 
 function escapeHtml(s: string): string {
     return s
@@ -46,66 +56,170 @@ type Note = {
     createdAt: string;
 }
 
-app.get(`${honoNotePrefix}/health`, (c) => {
+app.get(`${honoNotePrefix}/health`, (c: any) => {
     return c.text('Hello Hono!')
 })
 
-app.get('/hono-note', (c) => c.redirect('/hono-note/'))
-app.get(`${honoNotePrefix}/`, requireAuth, (c) => {
+app.get('/hono-note', (c: any) => c.redirect('/hono-note/'))
+app.get(`${honoNotePrefix}/`, requireAuth, (c: any) => {
     return c.html(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8" />
-      <title>Notes</title>
-      <style>
-        body { font-family: sans-serif; padding: 20px; }
-        .note { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-        button { padding: 6px 12px; }
-      </style>
-    </head>
-    <body>
-      <h1>Notes</h1>
-      <a href="/hono-note/logout">ログアウト</a>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Notes</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .note { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+    button { padding: 6px 12px; }
+  </style>
+</head>
+<body>
+  <h1>Notes</h1>
+  <a href="/hono-note/logout">ログアウト</a>
 
-      <button onclick="location.href='/hono-note/register'">
-        新規登録
-      </button>
+  <button onclick="location.href='/hono-note/register'">
+    新規登録
+  </button>
 
-      <hr />
+  <form id="uploadForm" style="display:inline-block; margin-left: 12px;">
+    <input id="fileInput" type="file" name="file" />
+    <button type="submit">ファイルアップロード</button>
+  </form>
 
-      <div id="list"></div>
+  <div id="uploadMsg" style="margin-top: 8px;"></div>
 
-      <script>
-        async function loadList() {
-          const res = await fetch('/hono-note/list');
-          const data = await res.json();
-          console.log("result:",data)
+  <hr />
 
-          const listDiv = document.getElementById('list');
-          listDiv.innerHTML = '';
+  <h2>Files</h2>
+  <div id="fileList"></div>
 
-          data.forEach(note => {
-            const div = document.createElement('div');
-            div.className = 'note';
-            div.innerHTML = \`
-              <h3>\${note.title}</h3>
-              <small>Updated: \${note.updatedAt}</small>
-              <small>Created: \${note.createdAt}</small>
-              <a href="/hono-note/edit?id=\${note.id}">編集</a>
-            \`;
-            listDiv.appendChild(div);
-          });
-        }
+  <hr />
 
-        loadList();
-      </script>
-    </body>
-    </html>
+  <h2>Notes</h2>
+  <div id="list"></div>
+
+  <script>
+    async function loadList() {
+      const res = await fetch('/hono-note/note/list');
+      if (!res.ok) {
+        console.error('note list failed', res.status);
+        return;
+      }
+      const data = await res.json();
+
+      const listDiv = document.getElementById('list');
+      listDiv.innerHTML = '';
+
+      data.forEach(note => {
+        const div = document.createElement('div');
+        div.className = 'note';
+        div.innerHTML = \`
+          <h3>\${note.title}</h3>
+          <small>Updated: \${note.updatedAt}</small><br/>
+          <small>Created: \${note.createdAt}</small><br/>
+          <a href="/hono-note/edit?id=\${note.id}">編集</a>
+        \`;
+        listDiv.appendChild(div);
+      });
+    }
+
+    async function loadFileList() {
+      const res = await fetch('/hono-note/file/list');
+      if (!res.ok) {
+        console.error('file list failed', res.status);
+        return;
+      }
+      const data = await res.json();
+
+      const fileListDiv = document.getElementById('fileList');
+      fileListDiv.innerHTML = '';
+
+      data.forEach(file => {
+        const div = document.createElement('div');
+        div.className = 'note';
+        div.innerHTML = \`
+          <strong>\${file.originalFileName}</strong><br />
+          <small>Created: \${file.createdAt}</small><br />
+          <a href="/hono-note/download?id=\${encodeURIComponent(file.id)}">ダウンロード</a>
+        \`;
+        fileListDiv.appendChild(div);
+      });
+    }
+
+    const uploadForm = document.getElementById('uploadForm');
+    const uploadMsg = document.getElementById('uploadMsg');
+
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const fileInput = document.getElementById('fileInput');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        uploadMsg.textContent = 'ファイルを選択してください';
+        return;
+      }
+
+      const fd = new FormData();
+      fd.append('file', fileInput.files[0]);
+
+      const res = await fetch('/hono-note/upload', {
+        method: 'POST',
+        body: fd
+      });
+
+      if (res.ok) {
+        uploadMsg.textContent = '✅ アップロード成功';
+        fileInput.value = '';
+        await loadFileList(); // ★ここで更新
+      } else {
+        const text = await res.text();
+        uploadMsg.textContent = '❌ 失敗: ' + text;
+      }
+    });
+
+    loadList();
+    loadFileList();
+  </script>
+</body>
+</html>
   `);
 });
 
-app.get(`${honoNotePrefix}/register`, requireAuth, (c) => {
+app.post(`${honoNotePrefix}/upload`, requireAuth, async (c: any) => {
+    const body = await c.req.parseBody()
+    const now = new Date().toISOString();
+    const file = body['file']
+    console.log(file)
+    if (!(file instanceof File)) {
+        return c.json({ message: 'not found file' }, 400)
+    }
+
+    console.log(`file name: ${file.name}`)
+    console.log(`file size: ${file.size} bytes`)
+
+    const uuid = crypto.randomUUID();
+    const bytes = await file.arrayBuffer()
+    const buffer = Buffer.from(bytes)
+    const extention = extname(file.name)
+    const saveFileName = `${uuid}${extention}`
+    const uploadFilePath = join(filesDir, saveFileName)
+    await writeFile(uploadFilePath, buffer)
+    console.log("uploadFilePath :", uploadFilePath)
+
+    doQuery(
+        `INSERT INTO ${filesTable} (saveFileName, originalFileName,  updatedAt, createdAt)
+       VALUES (?, ?, ?, ?)`,
+        [saveFileName, file.name, now, now]
+    );
+
+    return c.json({
+        message: 'success',
+        filename: file.name,
+        size: file.size
+    })
+});
+
+app.get(`${honoNotePrefix}/register`, requireAuth, (c: any) => {
     return c.html(`
 <!DOCTYPE html>
 <html>
@@ -158,12 +272,18 @@ form.addEventListener('submit', async (e) => {
   `);
 });
 
-app.get(`${honoNotePrefix}/list`, requireAuth, (c) => {
-    const res = doQuery(`SELECT * FROM ${tableName} ORDER BY updatedAt DESC`);
+app.get(`${honoNotePrefix}/note/list`, requireAuth, (c: any) => {
+    const res = doQuery(`SELECT * FROM ${notesTable} ORDER BY updatedAt DESC`);
     return c.json(res);
 })
 
-app.post(`${honoNotePrefix}/register`, requireAuth, async (c) => {
+
+app.get(`${honoNotePrefix}/file/list`, requireAuth, (c: any) => {
+    const res = doQuery(`SELECT * FROM ${filesTable} ORDER BY updatedAt DESC`);
+    return c.json(res);
+})
+
+app.post(`${honoNotePrefix}/register`, requireAuth, async (c: any) => {
     try {
         const body = await c.req.parseBody();
         const now = new Date().toISOString();
@@ -173,7 +293,7 @@ app.post(`${honoNotePrefix}/register`, requireAuth, async (c) => {
         }
 
         doQuery(
-            `INSERT INTO ${tableName} (title, body, createdAt, updatedAt)
+            `INSERT INTO ${notesTable} (title, body, createdAt, updatedAt)
        VALUES (?, ?, ?, ?)`,
             [body.title, body.body, now, now]
         );
@@ -184,7 +304,7 @@ app.post(`${honoNotePrefix}/register`, requireAuth, async (c) => {
     }
 });
 
-app.post(`${honoNotePrefix}/update`, requireAuth, async (c) => {
+app.post(`${honoNotePrefix}/update`, requireAuth, async (c: any) => {
     try {
         const body = await c.req.parseBody();
         const now = new Date().toISOString();
@@ -195,7 +315,7 @@ app.post(`${honoNotePrefix}/update`, requireAuth, async (c) => {
         }
 
         doQuery(
-            `UPDATE ${tableName} SET title = ?, body = ?, updatedAt = ? WHERE ID = ?`,
+            `UPDATE ${notesTable} SET title = ?, body = ?, updatedAt = ? WHERE ID = ?`,
             [body.title, body.body, now, id]
         );
 
@@ -205,7 +325,7 @@ app.post(`${honoNotePrefix}/update`, requireAuth, async (c) => {
     }
 });
 
-app.get(`${honoNotePrefix}/edit`, requireAuth, (c) => {
+app.get(`${honoNotePrefix}/edit`, requireAuth, (c: any) => {
     const idStr = c.req.query('id');
     const id = Number(idStr);
 
@@ -214,7 +334,7 @@ app.get(`${honoNotePrefix}/edit`, requireAuth, (c) => {
     }
 
     // ここで1件取る（doQueryはSELECTなら配列を返す前提）
-    const rows = doQuery(`SELECT * FROM ${tableName} WHERE id = ?`, [id]) as any[];
+    const rows = doQuery(`SELECT * FROM ${notesTable} WHERE id = ?`, [id]) as any[];
     const note = rows[0];
 
     if (!note) {
@@ -275,7 +395,7 @@ form.addEventListener('submit', async (e) => {
   `);
 });
 
-app.get(`${honoNotePrefix}/login`, (c) => {
+app.get(`${honoNotePrefix}/login`, (c: any) => {
     return c.html(`
   <!DOCTYPE html>
   <html>
@@ -301,7 +421,7 @@ app.get(`${honoNotePrefix}/login`, (c) => {
   `);
 });
 
-app.post(`${honoNotePrefix}/login`, async (c) => {
+app.post(`${honoNotePrefix}/login`, async (c: any) => {
     console.log("ENV CHECK", {
         bunUser: Bun.env.AUTH_USERNAME,
         procUser: process.env.AUTH_USERNAME,
@@ -326,7 +446,7 @@ app.post(`${honoNotePrefix}/login`, async (c) => {
     return c.html('ログイン失敗', 401);
 });
 
-app.get(`${honoNotePrefix}/logout`, (c) => {
+app.get(`${honoNotePrefix}/logout`, (c: any) => {
     deleteCookie(c, 'session');
     return c.redirect('/hono-note/login');
 });
@@ -342,6 +462,7 @@ function doQuery<T = unknown>(sql: string, params: any[] = []): T {
         return { success: true } as T;
     }
 }
+
 const port = Number(9010)
 export default {
     port,
