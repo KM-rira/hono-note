@@ -2,3 +2,4 @@
 node_modules/
 hono-note/note.sqlite
 db/note.sqlite
+uploadFiles/*
