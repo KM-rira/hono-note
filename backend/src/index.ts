@@ -13,7 +13,7 @@ const compressibleExt = new Set([".txt", ".md", ".json", ".csv", ".log", ".html"
 
 const app = new Hono()
 
-const honoNotePrefix = '/hono-note'
+const honoNotePrefix = '/hono-note/backend'
 
 // このファイルの絶対パス基準
 const __dirname = dirname(import.meta.path);
@@ -65,130 +65,130 @@ app.get(`${honoNotePrefix}/health`, (c: any) => {
     return c.text('Hello Hono!')
 })
 
-app.get('/hono-note', (c: any) => c.redirect('/hono-note/'))
-app.get(`${honoNotePrefix}/`, requireAuth, (c: any) => {
-    return c.html(`
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-  <title>Notes</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    .note { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-    button { padding: 6px 12px; }
-  </style>
-</head>
-<body>
-  <h1>Notes</h1>
-  <a href="/hono-note/logout">ログアウト</a>
-
-  <button onclick="location.href='/hono-note/register'">
-    新規登録
-  </button>
-
-  <form id="uploadForm" style="display:inline-block; margin-left: 12px;">
-    <input id="fileInput" type="file" name="file" />
-    <button type="submit">ファイルアップロード</button>
-  </form>
-
-  <div id="uploadMsg" style="margin-top: 8px;"></div>
-
-  <hr />
-
-  <h2>Files</h2>
-  <div id="fileList"></div>
-
-  <hr />
-
-  <h2>Notes</h2>
-  <div id="list"></div>
-
-  <script>
-    async function loadList() {
-      const res = await fetch('/hono-note/note/list');
-      if (!res.ok) {
-        console.error('note list failed', res.status);
-        return;
-      }
-      const data = await res.json();
-
-      const listDiv = document.getElementById('list');
-      listDiv.innerHTML = '';
-
-      data.forEach(note => {
-        const div = document.createElement('div');
-        div.className = 'note';
-        div.innerHTML = \`
-          <h3>\${note.title}</h3>
-          <small>Updated: \${note.updatedAt}</small><br/>
-          <small>Created: \${note.createdAt}</small><br/>
-          <a href="/hono-note/edit?id=\${note.id}">編集</a>
-        \`;
-        listDiv.appendChild(div);
-      });
-    }
-
-    async function loadFileList() {
-      const res = await fetch('/hono-note/file/list');
-      if (!res.ok) {
-        console.error('file list failed', res.status);
-        return;
-      }
-      const data = await res.json();
-
-      const fileListDiv = document.getElementById('fileList');
-      fileListDiv.innerHTML = '';
-
-      data.forEach(file => {
-        const div = document.createElement('div');
-        div.className = 'note';
-        div.innerHTML = \`
-          <strong>\${file.originalFileName}</strong><br />
-          <small>Created: \${file.createdAt}</small><br />
-        <a href="/hono-note/download?id=\${file.id}">ダウンロード</a>
-        \`;
-        fileListDiv.appendChild(div);
-      });
-    }
-
-    const uploadForm = document.getElementById('uploadForm');
-    const uploadMsg = document.getElementById('uploadMsg');
-
-    uploadForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const fileInput = document.getElementById('fileInput');
-      if (!fileInput.files || fileInput.files.length === 0) {
-        uploadMsg.textContent = 'ファイルを選択してください';
-        return;
-      }
-
-      const fd = new FormData();
-      fd.append('file', fileInput.files[0]);
-
-      const res = await fetch('/hono-note/upload', {
-        method: 'POST',
-        body: fd
-      });
-
-      if (res.ok) {
-        uploadMsg.textContent = '✅ アップロード成功';
-        fileInput.value = '';
-        await loadFileList(); // ★ここで更新
-      } else {
-        const text = await res.text();
-        uploadMsg.textContent = '❌ 失敗: ' + text;
-      }
-    });
-
-    loadList();
-    loadFileList();
-  </script>
-</body>
-</html>
-  `);
-});
+// app.get('/hono-note', (c: any) => c.redirect('/hono-note/'))
+// app.get(`${honoNotePrefix}/`, requireAuth, (c: any) => {
+//     return c.html(`
+// <!DOCTYPE html>
+// <html>
+// <head>
+//   <meta charset="UTF-8" />
+//   <title>Notes</title>
+//   <style>
+//     body { font-family: sans-serif; padding: 20px; }
+//     .note { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+//     button { padding: 6px 12px; }
+//   </style>
+// </head>
+// <body>
+//   <h1>Notes</h1>
+//   <a href="/hono-note/logout">ログアウト</a>
+//
+//   <button onclick="location.href='/hono-note/register'">
+//     新規登録
+//   </button>
+//
+//   <form id="uploadForm" style="display:inline-block; margin-left: 12px;">
+//     <input id="fileInput" type="file" name="file" />
+//     <button type="submit">ファイルアップロード</button>
+//   </form>
+//
+//   <div id="uploadMsg" style="margin-top: 8px;"></div>
+//
+//   <hr />
+//
+//   <h2>Files</h2>
+//   <div id="fileList"></div>
+//
+//   <hr />
+//
+//   <h2>Notes</h2>
+//   <div id="list"></div>
+//
+//   <script>
+//     async function loadList() {
+//       const res = await fetch('/hono-note/note/list');
+//       if (!res.ok) {
+//         console.error('note list failed', res.status);
+//         return;
+//       }
+//       const data = await res.json();
+//
+//       const listDiv = document.getElementById('list');
+//       listDiv.innerHTML = '';
+//
+//       data.forEach(note => {
+//         const div = document.createElement('div');
+//         div.className = 'note';
+//         div.innerHTML = \`
+//           <h3>\${note.title}</h3>
+//           <small>Updated: \${note.updatedAt}</small><br/>
+//           <small>Created: \${note.createdAt}</small><br/>
+//           <a href="/hono-note/edit?id=\${note.id}">編集</a>
+//         \`;
+//         listDiv.appendChild(div);
+//       });
+//     }
+//
+//     async function loadFileList() {
+//       const res = await fetch('/hono-note/file/list');
+//       if (!res.ok) {
+//         console.error('file list failed', res.status);
+//         return;
+//       }
+//       const data = await res.json();
+//
+//       const fileListDiv = document.getElementById('fileList');
+//       fileListDiv.innerHTML = '';
+//
+//       data.forEach(file => {
+//         const div = document.createElement('div');
+//         div.className = 'note';
+//         div.innerHTML = \`
+//           <strong>\${file.originalFileName}</strong><br />
+//           <small>Created: \${file.createdAt}</small><br />
+//         <a href="/hono-note/download?id=\${file.id}">ダウンロード</a>
+//         \`;
+//         fileListDiv.appendChild(div);
+//       });
+//     }
+//
+//     const uploadForm = document.getElementById('uploadForm');
+//     const uploadMsg = document.getElementById('uploadMsg');
+//
+//     uploadForm.addEventListener('submit', async (e) => {
+//       e.preventDefault();
+//
+//       const fileInput = document.getElementById('fileInput');
+//       if (!fileInput.files || fileInput.files.length === 0) {
+//         uploadMsg.textContent = 'ファイルを選択してください';
+//         return;
+//       }
+//
+//       const fd = new FormData();
+//       fd.append('file', fileInput.files[0]);
+//
+//       const res = await fetch('/hono-note/upload', {
+//         method: 'POST',
+//         body: fd
+//       });
+//
+//       if (res.ok) {
+//         uploadMsg.textContent = '✅ アップロード成功';
+//         fileInput.value = '';
+//         await loadFileList(); // ★ここで更新
+//       } else {
+//         const text = await res.text();
+//         uploadMsg.textContent = '❌ 失敗: ' + text;
+//       }
+//     });
+//
+//     loadList();
+//     loadFileList();
+//   </script>
+// </body>
+// </html>
+//   `);
+// });
 
 app.post(`${honoNotePrefix}/upload`, requireAuth, async (c: any) => {
     const body = await c.req.parseBody()
@@ -391,75 +391,103 @@ app.post(`${honoNotePrefix}/update`, requireAuth, async (c: any) => {
     }
 });
 
-app.get(`${honoNotePrefix}/edit`, requireAuth, (c: any) => {
-    const idStr = c.req.query('id');
+// app.get(`${honoNotePrefix}/edit`, requireAuth, (c: any) => {
+//     const idStr = c.req.query('id');
+//     const id = Number(idStr);
+//
+//     if (!idStr || Number.isNaN(id)) {
+//         return c.html('not found id', 400);
+//     }
+//
+//     // ここで1件取る（doQueryはSELECTなら配列を返す前提）
+//     const rows = doQuery(`SELECT * FROM ${notesTable} WHERE id = ?`, [id]) as any[];
+//     const note = rows[0];
+//
+//     if (!note) {
+//         return c.html('note not found', 404);
+//     }
+//
+//     return c.html(`
+// <!DOCTYPE html>
+// <html>
+// <head>
+//   <meta charset="UTF-8" />
+//   <title>Edit</title>
+// </head>
+// <body>
+// <h1>編集 (id=${note.id})</h1>
+//
+// <form id="editForm">
+//   <input type="hidden" name="id" value="${note.id}" />
+//   <div>
+//     <input name="title" placeholder="タイトル" value="${escapeHtml(note.title ?? '')}" />
+//   </div>
+//   <div>
+//     <textarea name="body" placeholder="本文">${escapeHtml(note.body ?? '')}</textarea>
+//   </div>
+//   <button type="submit">更新</button>
+// </form>
+//
+// <br/>
+// <a href="/hono-note/">戻る</a>
+//
+// <script>
+// const form = document.getElementById('editForm');
+//
+// form.addEventListener('submit', async (e) => {
+//   e.preventDefault();
+//
+//   const formData = new FormData(form);
+//
+//   const res = await fetch('/hono-note/update', {
+//     method: 'POST',
+//     body: formData
+//   });
+//
+//   const data = await res.json();
+//
+//   if (data.success) {
+//     alert('✅ 更新成功');
+//     window.location.href = '/hono-note/';
+//   } else {
+//     alert('❌ ' + (data.message || '更新失敗'));
+//   }
+// });
+//
+// </script>
+//
+// </body>
+// </html>
+//   `);
+// });
+
+app.get(`${honoNotePrefix}/backend/note/detail`, requireAuth, (c: any) => {
+    const idStr = c.req.query("id");
     const id = Number(idStr);
 
     if (!idStr || Number.isNaN(id)) {
-        return c.html('not found id', 400);
+        return c.json({ success: false, message: "not found id" }, 400);
     }
 
-    // ここで1件取る（doQueryはSELECTなら配列を返す前提）
     const rows = doQuery(`SELECT * FROM ${notesTable} WHERE id = ?`, [id]) as any[];
     const note = rows[0];
 
     if (!note) {
-        return c.html('note not found', 404);
+        return c.json({ success: false, message: "note not found" }, 404);
     }
 
-    return c.html(`
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-  <title>Edit</title>
-</head>
-<body>
-<h1>編集 (id=${note.id})</h1>
-
-<form id="editForm">
-  <input type="hidden" name="id" value="${note.id}" />
-  <div>
-    <input name="title" placeholder="タイトル" value="${escapeHtml(note.title ?? '')}" />
-  </div>
-  <div>
-    <textarea name="body" placeholder="本文">${escapeHtml(note.body ?? '')}</textarea>
-  </div>
-  <button type="submit">更新</button>
-</form>
-
-<br/>
-<a href="/hono-note/">戻る</a>
-
-<script>
-const form = document.getElementById('editForm');
-
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  const formData = new FormData(form);
-
-  const res = await fetch('/hono-note/update', {
-    method: 'POST',
-    body: formData
-  });
-
-  const data = await res.json();
-
-  if (data.success) {
-    alert('✅ 更新成功');
-    window.location.href = '/hono-note/';
-  } else {
-    alert('❌ ' + (data.message || '更新失敗'));
-  }
+    return c.json({
+        success: true,
+        note: {
+            id: note.id,
+            title: note.title ?? "",
+            body: note.body ?? "",
+            createdAt: note.createdAt,
+            updatedAt: note.updatedAt,
+        },
+    });
 });
 
-</script>
-
-</body>
-</html>
-  `);
-});
 
 app.get(`${honoNotePrefix}/login`, (c: any) => {
     return c.html(`
