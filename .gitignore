@@ -1,5 +1,9 @@
-# deps
+# backend
 backend/node_modules/
-backend/note.sqlite
-db/backend/note.sqlite
-backenduploadFiles/*
+backend/db/note.sqlite
+backend/uploadFiles/*
+
+# frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
