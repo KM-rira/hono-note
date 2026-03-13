@@ -461,7 +461,7 @@ app.post(`${honoNotePrefix}/update`, requireAuth, async (c: any) => {
 //   `);
 // });
 
-app.get(`${honoNotePrefix}/backend/note/detail`, requireAuth, (c: any) => {
+app.get(`${honoNotePrefix}/note/detail`, requireAuth, (c: any) => {
     const idStr = c.req.query("id");
     const id = Number(idStr);
 

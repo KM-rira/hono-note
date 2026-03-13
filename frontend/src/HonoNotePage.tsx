@@ -73,7 +73,7 @@ export default function HonoNotePage() {
             const fd = new FormData();
             fd.append("file", fileInput.files[0]);
 
-            const res = await fetch("/hono-note/upload", {
+            const res = await fetch("/hono-note/backend/upload", {
                 method: "POST",
                 body: fd,
                 credentials: "include",
@@ -156,7 +156,7 @@ export default function HonoNotePage() {
                         <br />
                         <small>Created: {note.createdAt}</small>
                         <br />
-                        <a href={`/hono-note/frontend/edit?id=${note.id}`}>編集</a>
+                        <a href={`edit?id=${note.id}`}>編集</a>
                     </div>
                 ))}
             </div>

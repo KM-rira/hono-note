@@ -68,7 +68,7 @@ export default function EditNotePage() {
             fd.append("title", title);
             fd.append("body", body);
 
-            const res = await fetch("/hono-note/update", {
+            const res = await fetch("/hono-note/backend/update", {
                 method: "POST",
                 body: fd,
                 credentials: "include",
@@ -78,7 +78,7 @@ export default function EditNotePage() {
 
             if (res.ok && data.success) {
                 alert("✅ 更新成功");
-                window.location.href = "/hono-note/frontend/";
+                window.location.href = "/";
             } else {
                 setMessage(data.message || "更新失敗");
             }
@@ -131,7 +131,7 @@ export default function EditNotePage() {
             {message && <div style={{ marginTop: 12, color: "red" }}>❌ {message}</div>}
 
             <br />
-            <a href="/hono-note/frontend/">戻る</a>
+            <a href="/">戻る</a>
         </div>
     );
 }
