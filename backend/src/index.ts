@@ -334,15 +334,20 @@ app.get(`${honoNotePrefix}/download`, requireAuth, (c: any) => {
     const gunzip = createGunzip();
     const out = new PassThrough();
 
-    pipeline(src, gunzip, out, (err) => {
-        if (err) {
-            console.error("gunzip error:", err);
-            out.destroy(err);
-        }
+    src.pipe(gunzip).pipe(out);
+
+    src.on("error", (err) => {
+        console.error("src error:", err);
+        out.destroy(err);
     });
 
-    return c.body(stream as any);
-})
+    gunzip.on("error", (err) => {
+        console.error("gunzip error:", err);
+        out.destroy(err);
+    });
+
+    return c.body(out as any);
+});
 
 app.post(`${honoNotePrefix}/register`, requireAuth, async (c: any) => {
     try {
