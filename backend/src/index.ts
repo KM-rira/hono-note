@@ -191,6 +191,7 @@ app.get(`${honoNotePrefix}/health`, (c: any) => {
 // });
 
 app.post(`${honoNotePrefix}/upload`, requireAuth, async (c: any) => {
+    console.log("Upload endpoint hit");
     const body = await c.req.parseBody()
     const now = new Date().toISOString();
     const file = body['file']
@@ -234,6 +235,7 @@ app.post(`${honoNotePrefix}/upload`, requireAuth, async (c: any) => {
 });
 
 app.get(`${honoNotePrefix}/register`, requireAuth, (c: any) => {
+    console.log("register page hit");
     return c.html(`
 <!DOCTYPE html>
 <html>
@@ -287,16 +289,19 @@ form.addEventListener('submit', async (e) => {
 });
 
 app.get(`${honoNotePrefix}/note/list`, requireAuth, (c: any) => {
+    console.log("note list hit");
     const res = doQuery(`SELECT * FROM ${notesTable} ORDER BY updatedAt DESC`);
     return c.json(res);
 })
 
 app.get(`${honoNotePrefix}/file/list`, requireAuth, (c: any) => {
+    console.log("file list hit");
     const res = doQuery(`SELECT * FROM ${filesTable} ORDER BY updatedAt DESC`);
     return c.json(res);
 })
 
 app.get(`${honoNotePrefix}/download`, requireAuth, (c: any) => {
+    console.log("download hit");
     const idStr = c.req.query('id');
     const id = Number(idStr);
 
@@ -350,6 +355,7 @@ app.get(`${honoNotePrefix}/download`, requireAuth, (c: any) => {
 });
 
 app.post(`${honoNotePrefix}/register`, requireAuth, async (c: any) => {
+    console.log("register post hit");
     try {
         const body = await c.req.parseBody();
         const now = new Date().toISOString();
@@ -371,6 +377,7 @@ app.post(`${honoNotePrefix}/register`, requireAuth, async (c: any) => {
 });
 
 app.post(`${honoNotePrefix}/update`, requireAuth, async (c: any) => {
+    console.log("update post hit");
     try {
         const body = await c.req.parseBody();
         const now = new Date().toISOString();
@@ -462,6 +469,7 @@ app.post(`${honoNotePrefix}/update`, requireAuth, async (c: any) => {
 // });
 
 app.get(`${honoNotePrefix}/note/detail`, requireAuth, (c: any) => {
+    console.log("note detail get hit");
     const idStr = c.req.query("id");
     const id = Number(idStr);
 
@@ -490,6 +498,7 @@ app.get(`${honoNotePrefix}/note/detail`, requireAuth, (c: any) => {
 
 
 app.get(`${honoNotePrefix}/login`, (c: any) => {
+    console.log("login get hit");
     return c.html(`
   <!DOCTYPE html>
   <html>
@@ -516,6 +525,7 @@ app.get(`${honoNotePrefix}/login`, (c: any) => {
 });
 
 app.post(`${honoNotePrefix}/login`, async (c: any) => {
+    console.log("login post hit");
     console.log("ENV CHECK", {
         bunUser: Bun.env.AUTH_USERNAME,
         procUser: process.env.AUTH_USERNAME,
@@ -541,6 +551,7 @@ app.post(`${honoNotePrefix}/login`, async (c: any) => {
 });
 
 app.get(`${honoNotePrefix}/logout`, (c: any) => {
+    console.log("logout get hit");
     deleteCookie(c, 'session');
     return c.redirect('/hono-note/login');
 });
@@ -564,6 +575,7 @@ export default {
 }
 
 function requireAuth(c: any, next: any) {
+    console.log("requireAuth hit");
     const session = getCookie(c, 'session');
     if (session === 'ok') {
         return next();
