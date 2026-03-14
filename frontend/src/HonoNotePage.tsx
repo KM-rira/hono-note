@@ -108,7 +108,7 @@ export default function HonoNotePage() {
             <a href="/hono-note/backend/logout">ログアウト</a>
 
             <div style={{ marginTop: 12 }}>
-                <button onClick={() => (window.location.href = "/hono-note/backend/register")}>
+                <button onClick={() => (window.location.href = "/hono-note/frontend/register")}>
                     新規登録
                 </button>
 
@@ -157,7 +157,7 @@ export default function HonoNotePage() {
                         <br />
                         <small>Created: {note.createdAt}</small>
                         <br />
-                        <a href={`edit?id=${note.id}`}>編集</a>
+                        <a href={`/hono-note/frontend/edit/${note.id}`}>編集</a>
                     </div>
                 ))}
             </div>

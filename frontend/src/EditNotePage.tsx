@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
 
 type NoteDetail = {
     id: number;
@@ -10,6 +11,7 @@ type NoteDetail = {
 
 export default function EditNotePage() {
     console.log("EditNotePage hit");
+    const { id } = useParams();
     const [note, setNote] = useState<NoteDetail | null>(null);
     const [title, setTitle] = useState("");
     const [body, setBody] = useState("");
@@ -20,9 +22,6 @@ export default function EditNotePage() {
     useEffect(() => {
         const loadNote = async () => {
             try {
-                const params = new URLSearchParams(window.location.search);
-                const id = params.get("id");
-
                 if (!id) {
                     setMessage("id がありません");
                     setLoading(false);
@@ -79,7 +78,7 @@ export default function EditNotePage() {
 
             if (res.ok && data.success) {
                 alert("✅ 更新成功");
-                window.location.href = "/";
+                window.location.href = "/hono-note/frontend";
             } else {
                 setMessage(data.message || "更新失敗");
             }
@@ -132,7 +131,7 @@ export default function EditNotePage() {
             {message && <div style={{ marginTop: 12, color: "red" }}>❌ {message}</div>}
 
             <br />
-            <a href="/">戻る</a>
+            <a href="/hono-note/frontend">戻る</a>
         </div>
     );
 }

@@ -234,59 +234,59 @@ app.post(`${honoNotePrefix}/upload`, requireAuth, async (c: any) => {
     })
 });
 
-app.get(`${honoNotePrefix}/register`, requireAuth, (c: any) => {
-    console.log("register page hit");
-    return c.html(`
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8" />
-<title>Register</title>
-</head>
-<body>
-<h1>新規登録</h1>
-
-<form id="registerForm">
-  <div>
-    <input name="title" placeholder="タイトル" />
-  </div>
-  <div>
-    <textarea name="body" placeholder="本文"></textarea>
-  </div>
-  <button type="submit">登録</button>
-</form>
-
-<br />
-<a href="/hono-note/">戻る</a>
-
-<script>
-const form = document.getElementById('registerForm');
-
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  const formData = new FormData(form);
-
-  const res = await fetch('/hono-note/register', {
-    method: 'POST',
-    body: formData
-  });
-
-  const data = await res.json();
-
-  if (data.success) {
-    alert('✅ 登録成功');
-    window.location.href = '/hono-note/';
-  } else {
-    alert('❌ ' + (data.message || '登録失敗'));
-  }
-});
-</script>
-
-</body>
-</html>
-  `);
-});
+// app.get(`${honoNotePrefix}/register`, requireAuth, (c: any) => {
+//     console.log("register page hit");
+//     return c.html(`
+// <!DOCTYPE html>
+// <html>
+// <head>
+// <meta charset="UTF-8" />
+// <title>Register</title>
+// </head>
+// <body>
+// <h1>新規登録</h1>
+//
+// <form id="registerForm">
+//   <div>
+//     <input name="title" placeholder="タイトル" />
+//   </div>
+//   <div>
+//     <textarea name="body" placeholder="本文"></textarea>
+//   </div>
+//   <button type="submit">登録</button>
+// </form>
+//
+// <br />
+// <a href="/hono-note/">戻る</a>
+//
+// <script>
+// const form = document.getElementById('registerForm');
+//
+// form.addEventListener('submit', async (e) => {
+//   e.preventDefault();
+//
+//   const formData = new FormData(form);
+//
+//   const res = await fetch('/hono-note/backend/register', {
+//     method: 'POST',
+//     body: formData
+//   });
+//
+//   const data = await res.json();
+//
+//   if (data.success) {
+//     alert('✅ 登録成功');
+//     window.location.href = '/hono-note/';
+//   } else {
+//     alert('❌ ' + (data.message || '登録失敗'));
+//   }
+// });
+// </script>
+//
+// </body>
+// </html>
+//   `);
+// });
 
 app.get(`${honoNotePrefix}/note/list`, requireAuth, (c: any) => {
     console.log("note list hit");

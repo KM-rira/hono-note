@@ -1,16 +1,16 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-export default defineConfig(({ command }) => ({
+export default defineConfig({
     plugins: [react()],
-    base: command === "serve" ? "/" : "/hono-note/frontend/",
+    base: "/",
     server: {
         open: "/",
         proxy: {
-            "/hono-note": {
+            "/hono-note/backend": {
                 target: "http://localhost:9010",
                 changeOrigin: true,
             },
         },
     },
-}));
+});
