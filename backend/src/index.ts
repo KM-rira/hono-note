@@ -497,63 +497,57 @@ app.get(`${honoNotePrefix}/note/detail`, requireAuth, (c: any) => {
 });
 
 
-app.get(`${honoNotePrefix}/login`, (c: any) => {
-    console.log("login get hit");
-    return c.html(`
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Login</title>
-  </head>
-  <body>
-    <h1>ログイン</h1>
-
-    <form method="post" action="/hono-note/login">
-      <div>
-        <input name="username" placeholder="ユーザー名" />
-      </div>
-      <div>
-        <input type="password" name="password" placeholder="パスワード" />
-      </div>
-      <button type="submit">ログイン</button>
-    </form>
-
-  </body>
-  </html>
-  `);
-});
+// app.get(`${honoNotePrefix}/login`, (c: any) => {
+//     console.log("login get hit");
+//     return c.html(`
+//   <!DOCTYPE html>
+//   <html>
+//   <head>
+//     <meta charset="UTF-8" />
+//     <title>Login</title>
+//   </head>
+//   <body>
+//     <h1>ログイン</h1>
+//
+//     <form method="post" action="/hono-note/login">
+//       <div>
+//         <input name="username" placeholder="ユーザー名" />
+//       </div>
+//       <div>
+//         <input type="password" name="password" placeholder="パスワード" />
+//       </div>
+//       <button type="submit">ログイン</button>
+//     </form>
+//
+//   </body>
+//   </html>
+//   `);
+// });
 
 app.post(`${honoNotePrefix}/login`, async (c: any) => {
-    console.log("login post hit");
-    console.log("ENV CHECK", {
-        bunUser: Bun.env.AUTH_USERNAME,
-        procUser: process.env.AUTH_USERNAME,
-    });
     const body = await c.req.parseBody();
     const username = body.username?.toString();
     const password = body.password?.toString();
 
-    // 環境変数がなければデフォルト値
-    const authUser = process.env.AUTH_USERNAME ?? 'admin';
-    const authPass = process.env.AUTH_PASSWORD ?? 'password';
+    const authUser = process.env.AUTH_USERNAME ?? "admin";
+    const authPass = process.env.AUTH_PASSWORD ?? "password";
 
     if (username === authUser && password === authPass) {
-        setCookie(c, 'session', 'ok', {
+        setCookie(c, "session", "ok", {
             httpOnly: true,
-            path: '/',
+            path: "/",
         });
 
-        return c.redirect('/hono-note/');
+        return c.json({ success: true });
     }
 
-    return c.html('ログイン失敗', 401);
+    return c.json({ success: false, message: "ログイン失敗" }, 401);
 });
 
 app.get(`${honoNotePrefix}/logout`, (c: any) => {
     console.log("logout get hit");
     deleteCookie(c, 'session');
-    return c.redirect('/hono-note/login');
+    return c.redirect('/hono-note/frontend/login');
 });
 
 function doQuery<T = unknown>(sql: string, params: any[] = []): T {
