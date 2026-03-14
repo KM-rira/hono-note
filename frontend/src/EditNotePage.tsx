@@ -9,6 +9,7 @@ type NoteDetail = {
 };
 
 export default function EditNotePage() {
+    console.log("EditNotePage hit");
     const [note, setNote] = useState<NoteDetail | null>(null);
     const [title, setTitle] = useState("");
     const [body, setBody] = useState("");

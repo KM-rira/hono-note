@@ -14,6 +14,7 @@ type FileItem = {
 };
 
 export default function HonoNotePage() {
+    console.log("HonoNotePage hit");
     const [notes, setNotes] = useState<Note[]>([]);
     const [files, setFiles] = useState<FileItem[]>([]);
     const [uploadMsg, setUploadMsg] = useState("");
