@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 
 type NoteDetail = {
     id: number;
@@ -11,6 +11,7 @@ type NoteDetail = {
 
 export default function EditNotePage() {
     console.log("EditNotePage hit");
+    const navigate = useNavigate();
     const { id } = useParams();
     const [note, setNote] = useState<NoteDetail | null>(null);
     const [title, setTitle] = useState("");
@@ -78,7 +79,7 @@ export default function EditNotePage() {
 
             if (res.ok && data.success) {
                 alert("✅ 更新成功");
-                window.location.href = "/hono-note/frontend";
+                navigate("/");
             } else {
                 setMessage(data.message || "更新失敗");
             }
@@ -131,7 +132,7 @@ export default function EditNotePage() {
             {message && <div style={{ marginTop: 12, color: "red" }}>❌ {message}</div>}
 
             <br />
-            <a href="/hono-note/frontend">戻る</a>
+            <Link to="/">戻る</Link>
         </div>
     );
 }

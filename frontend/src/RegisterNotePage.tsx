@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function RegisterNotePage() {
     const [title, setTitle] = useState("");
     const [body, setBody] = useState("");
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -23,7 +25,7 @@ export default function RegisterNotePage() {
 
             if (data.success) {
                 alert("✅ 登録成功");
-                window.location.href = "/hono-note/frontend/";
+                navigate("/");
             } else {
                 alert("❌ " + (data.message || "登録失敗"));
             }
@@ -64,7 +66,7 @@ export default function RegisterNotePage() {
             </form>
 
             <br />
-            <a href="/hono-note/frontend/">戻る</a>
+            <Link to="/">戻る</Link>
         </div>
     );
 }

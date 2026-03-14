@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 type Note = {
     id: number;
@@ -108,9 +109,11 @@ export default function HonoNotePage() {
             <a href="/hono-note/backend/logout">ログアウト</a>
 
             <div style={{ marginTop: 12 }}>
-                <button onClick={() => (window.location.href = "/hono-note/frontend/register")}>
-                    新規登録
-                </button>
+                <Link to="/register">
+                    <button>
+                        新規登録
+                    </button>
+                </Link>
 
                 <form
                     onSubmit={handleUpload}
@@ -157,7 +160,7 @@ export default function HonoNotePage() {
                         <br />
                         <small>Created: {note.createdAt}</small>
                         <br />
-                        <a href={`/hono-note/frontend/edit/${note.id}`}>編集</a>
+                        <Link to={`/edit/${note.id}`}>編集</Link>
                     </div>
                 ))}
             </div>
