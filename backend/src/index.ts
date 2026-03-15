@@ -6,7 +6,7 @@ import { mkdirSync, createReadStream, existsSync, createWriteStream } from 'node
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { lookup } from "mime-types";
 import { createGunzip, createGzip } from "zlib";
-import { PassThrough } from "stream";
+import { PassThrough, Readable } from "stream";
 import { pipeline } from "stream/promises";
 const compressibleExt = new Set([".txt", ".md", ".json", ".csv", ".log", ".html", ".css", ".js", ".ts", ".xml",
 ]);
@@ -302,40 +302,55 @@ app.get(`${honoNotePrefix}/file/list`, requireAuth, (c: any) => {
 
 app.get(`${honoNotePrefix}/download`, requireAuth, (c: any) => {
     console.log("download hit");
-    const idStr = c.req.query('id');
+
+    const idStr = c.req.query("id");
     const id = Number(idStr);
 
     if (!idStr || Number.isNaN(id)) {
-        return c.html('not found id', 400);
+        return c.text("not found id", 400);
     }
 
-    // ここで1件取る（doQueryはSELECTなら配列を返す前提）
     const rows = doQuery(`SELECT * FROM ${filesTable} WHERE id = ?`, [id]) as any[];
-    if (!rows || rows.length === 0) return c.text("File not found", 404);
+    if (!rows || rows.length === 0) {
+        return c.text("File not found", 404);
+    }
+
     const file = rows[0];
+
+    console.log("download target:", {
+        id: file.id,
+        originalFileName: file.originalFileName,
+        saveFileName: file.saveFileName,
+        isCompressed: file.isCompressed,
+    });
+
     const filesDir = join(__dirname, "..", "uploadFiles");
     const saveFilePath = join(filesDir, String(file.saveFileName));
 
     if (!existsSync(saveFilePath)) {
-        return c.text("file missing on server", 404)
+        return c.text("file missing on server", 404);
     }
 
-    const stream = createReadStream(saveFilePath);
     const originalName = String(file.originalFileName ?? "download.bin");
     const encoded = encodeURIComponent(originalName);
-    const guessed = lookup(originalName)
-    const contentType = typeof guessed === "string" ? guessed : "application/octet-stream"
+    const guessed = lookup(originalName);
+    const contentType =
+        typeof guessed === "string" ? guessed : "application/octet-stream";
 
     c.header("Content-Type", contentType);
-    c.header("Content-Disposition", `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`);
+    c.header(
+        "Content-Disposition",
+        `attachment; filename*=UTF-8''${encoded}`
+    );
 
-    const isCompressed = String(file.saveFileName).endsWith(".gz");
-    const src = createReadStream(saveFilePath);
+    const isCompressed = Number(file.isCompressed) === 1;
 
     if (!isCompressed) {
-        return c.body(src as any);
+        const src = createReadStream(saveFilePath);
+        return c.body(Readable.toWeb(src) as any);
     }
 
+    const src = createReadStream(saveFilePath);
     const gunzip = createGunzip();
     const out = new PassThrough();
 
@@ -351,7 +366,7 @@ app.get(`${honoNotePrefix}/download`, requireAuth, (c: any) => {
         out.destroy(err);
     });
 
-    return c.body(out as any);
+    return c.body(Readable.toWeb(out) as any);
 });
 
 app.post(`${honoNotePrefix}/register`, requireAuth, async (c: any) => {
