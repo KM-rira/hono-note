@@ -1,32 +1,28 @@
 #!/bin/bash
-
-set -e  # エラーが発生したら停止
+set -e
 
 echo "=== frontend 本番デプロイ開始 ==="
 echo ""
 
-# frontend ディレクトリへ移動
-cd ${HOME}/repo/hono-note/frontend
+FRONTEND_DIR="${HOME}/repo/hono-note/frontend"
+PUBLIC_DIR="/var/www/${MY_DOMAIN}/hono-note/frontend"
 
-# 依存関係インストール（必要に応じて）
+cd "$FRONTEND_DIR"
+
 echo "📦 依存関係を確認中..."
 bun install
 
-# build
 echo "🏗 frontend を build 中..."
 bun run build
 
-# Caddy reload
+echo "📁 公開ディレクトリ更新中..."
+sudo mkdir -p "$PUBLIC_DIR"
+sudo rsync -av --delete dist/ "$PUBLIC_DIR/"
+
 echo "🔄 Caddy を再読み込み中..."
 sudo systemctl reload caddy
 
-# ステータス確認
 echo ""
 echo "✅ frontend デプロイ完了！"
-echo ""
-echo "📊 Caddy ステータス："
-sudo systemctl status caddy --no-pager
-
-echo ""
-echo "📁 build 出力: /home/koji/repo/hono-note/frontend/dist"
+echo "📁 build 出力: $PUBLIC_DIR"
 echo "🌐 公開URL: ${MY_DOMAIN_URL}/hono-note/frontend/"
