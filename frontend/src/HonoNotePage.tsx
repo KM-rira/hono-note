@@ -106,7 +106,17 @@ export default function HonoNotePage() {
         <div style={{ fontFamily: "sans-serif", padding: 20 }}>
             <h1>Notes</h1>
 
-            <a href="/hono-note/backend/logout">ログアウト</a>
+            <button
+                onClick={async () => {
+                    await fetch("/hono-note/backend/logout", {
+                        method: "POST",
+                        credentials: "include",
+                    });
+                    window.location.href = "/hono-note/frontend/login";
+                }}
+            >
+                ログアウト
+            </button>
 
             <div style={{ marginTop: 12 }}>
                 <Link to="/register">
@@ -164,6 +174,6 @@ export default function HonoNotePage() {
                     </div>
                 ))}
             </div>
-        </div>
+        </div >
     );
 }

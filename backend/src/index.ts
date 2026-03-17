@@ -8,6 +8,8 @@ import { lookup } from "mime-types";
 import { createGunzip, createGzip } from "zlib";
 import { PassThrough, Readable } from "stream";
 import { pipeline } from "stream/promises";
+import { redis, connectRedis, redisStatusLog } from "./lib/redis";
+import { randomUUID } from "node:crypto";
 const compressibleExt = new Set([".txt", ".md", ".json", ".csv", ".log", ".html", ".css", ".js", ".ts", ".xml",
 ]);
 
@@ -43,6 +45,8 @@ console.log(resNotes);
 let resFiles = doQuery(`SELECT * FROM ${filesTable}`);
 console.log("Files:");
 console.log(resFiles);
+await connectRedis();
+redisStatusLog();
 
 function escapeHtml(s: string): string {
     return s
@@ -64,6 +68,11 @@ type Note = {
 app.get(`${honoNotePrefix}/health`, (c: any) => {
     return c.text('Hello Hono!')
 })
+
+app.get(`${honoNotePrefix}/me`, requireAuth, async (c: any) => {
+    const user = c.get("user");
+    return c.json({ success: true, user });
+});
 
 app.post(`${honoNotePrefix}/upload`, requireAuth, async (c: any) => {
     console.log("Upload endpoint hit");
@@ -262,7 +271,11 @@ app.get(`${honoNotePrefix}/note/detail`, requireAuth, (c: any) => {
     });
 });
 
+const SESSION_TTL_SECONDS = 60 * 60 * 24; // 24時間
+const SESSION_COOKIE_NAME = "session_id";
 app.post(`${honoNotePrefix}/login`, async (c: any) => {
+    console.log("login post hit");
+    redisStatusLog
     const body = await c.req.parseBody();
     const username = body.username?.toString();
     const password = body.password?.toString();
@@ -270,22 +283,45 @@ app.post(`${honoNotePrefix}/login`, async (c: any) => {
     const authUser = process.env.AUTH_USERNAME ?? "admin";
     const authPass = process.env.AUTH_PASSWORD ?? "password";
 
-    if (username === authUser && password === authPass) {
-        setCookie(c, "session", "ok", {
-            httpOnly: true,
-            path: "/",
-        });
-
-        return c.json({ success: true });
+    if (username !== authUser || password !== authPass) {
+        return c.json({ success: false, message: "ログイン失敗" }, 401);
     }
 
-    return c.json({ success: false, message: "ログイン失敗" }, 401);
+    const sessionId = randomUUID();
+    const sessionData = { username, createdAt: new Date().toISOString() };
+
+    await redis.set(
+        `session:${sessionId}`,
+        JSON.stringify(sessionData),
+        {
+            EX: SESSION_TTL_SECONDS,
+        }
+    );
+
+    setCookie(c, SESSION_COOKIE_NAME, sessionId, {
+        httpOnly: true,
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        sameSite: 'Lax',
+        maxAge: SESSION_TTL_SECONDS,
+    });
+    return c.json({ success: true, message: "ログイン成功" });
 });
 
-app.get(`${honoNotePrefix}/logout`, (c: any) => {
+
+app.post(`${honoNotePrefix}/logout`, (c: any) => {
     console.log("logout get hit");
-    deleteCookie(c, 'session');
-    return c.redirect('/hono-note/frontend/login');
+    redisStatusLog();
+    console.log("redis connected", {
+        isOpen: redis.isOpen,
+        isReady: redis.isReady,
+    });
+    const sessionId = getCookie(c, SESSION_COOKIE_NAME);
+    if (sessionId) {
+        redis.del(`session:${sessionId}`);
+    }
+    deleteCookie(c, SESSION_COOKIE_NAME, { path: "/" });
+    return c.json({ success: true });
 });
 
 function doQuery<T = unknown>(sql: string, params: any[] = []): T {
@@ -306,11 +342,34 @@ export default {
     fetch: app.fetch
 }
 
-function requireAuth(c: any, next: any) {
-    console.log("requireAuth hit");
-    const session = getCookie(c, 'session');
-    if (session === 'ok') {
-        return next();
+const COOKIE_NAME = "session_id"
+const SESSION_PREFIX = "session:"
+
+async function requireAuth(c: any, next: any) {
+    const sid = getCookie(c, COOKIE_NAME)
+
+    console.log("requireAuth", {
+        cookieHeader: c.req.header("cookie"),
+        sid,
+    })
+
+    if (!sid) {
+        return c.json({ success: false, message: "セッション切れ(cookieなし)" }, 401)
     }
-    return c.redirect('/hono-note/login');
+
+    const key = `${SESSION_PREFIX}${sid}`
+    const session = await redis.get(key)
+
+    console.log("requireAuth redis", {
+        key,
+        session,
+        ttl: await redis.ttl(key),
+    })
+
+    if (!session) {
+        return c.json({ success: false, message: "セッション切れ(redisなし)" }, 401)
+    }
+
+    c.set("user", session)
+    await next()
 }
