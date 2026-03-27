@@ -13,6 +13,9 @@ type FileItem = {
     originalFileName: string;
     createdAt: string;
 };
+const isImage = (filename: string) => {
+    return /\.(jpg|jpeg|png|gif|webp)$/i.test(filename);
+};
 
 export default function HonoNotePage() {
     console.log("HonoNotePage hit");
@@ -145,8 +148,27 @@ export default function HonoNotePage() {
                 {files.map((file) => (
                     <div
                         key={file.id}
-                        style={{ border: "1px solid #ccc", padding: 10, marginBottom: 10 }}
+                        style={{
+                            border: "1px solid #ccc",
+                            padding: 10,
+                            marginBottom: 10,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "16px",
+                        }}
                     >
+                        {isImage(file.originalFileName) && (
+                            <img
+                                src={`/hono-note/backend/download?id=${file.id}`}
+                                alt={file.originalFileName}
+                                style={{
+                                    width: "80px",
+                                    height: "80px",
+                                    objectFit: "cover",
+                                    borderRadius: "4px",
+                                }}
+                            />
+                        )}
                         <strong>{file.originalFileName}</strong>
                         <br />
                         <small>Created: {file.createdAt}</small>
