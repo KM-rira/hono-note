@@ -2,6 +2,7 @@
 backend/node_modules/
 backend/db/note.sqlite
 backend/uploadFiles/*
+backend/.env
 
 # frontend
 frontend/node_modules/
