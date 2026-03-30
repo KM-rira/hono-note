@@ -4,10 +4,14 @@ const globalForRedis = globalThis as unknown as {
     redis?: ReturnType<typeof createClient>;
 };
 
+const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
+
+console.log("🔌 Redis URL:", redisUrl);
+
 export const redis =
     globalForRedis.redis ??
     createClient({
-        url: process.env.REDIS_URL ?? "redis://localhost:6379",
+        url: redisUrl,
     });
 
 if (!globalForRedis.redis) {
