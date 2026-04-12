@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { apiFetch } from "./lib/api";
 
 type Note = {
     id: number;
@@ -26,9 +27,7 @@ export default function HonoNotePage() {
 
     const loadList = async () => {
         try {
-            const res = await fetch("/hono-note/backend/note/list", {
-                credentials: "include",
-            });
+            const res = await apiFetch("/hono-note/backend/note/list");
 
             if (!res.ok) {
                 console.error("note list failed", res.status);
@@ -44,9 +43,7 @@ export default function HonoNotePage() {
 
     const loadFileList = async () => {
         try {
-            const res = await fetch("/hono-note/backend/file/list", {
-                credentials: "include",
-            });
+            const res = await apiFetch("/hono-note/backend/file/list");
 
             if (!res.ok) {
                 console.error("file list failed", res.status);
@@ -78,10 +75,9 @@ export default function HonoNotePage() {
             const fd = new FormData();
             fd.append("file", fileInput.files[0]);
 
-            const res = await fetch("/hono-note/backend/upload", {
+            const res = await apiFetch("/hono-note/backend/upload", {
                 method: "POST",
                 body: fd,
-                credentials: "include",
             });
 
             if (res.ok) {
@@ -111,9 +107,8 @@ export default function HonoNotePage() {
 
             <button
                 onClick={async () => {
-                    await fetch("/hono-note/backend/logout", {
+                    await apiFetch("/hono-note/backend/logout", {
                         method: "POST",
-                        credentials: "include",
                     });
                     window.location.href = "/hono-note/frontend/login";
                 }}

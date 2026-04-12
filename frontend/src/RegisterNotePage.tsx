@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { apiFetch } from "./lib/api";
 
 export default function RegisterNotePage() {
     const [title, setTitle] = useState("");
@@ -16,7 +17,7 @@ export default function RegisterNotePage() {
             formData.append("title", title);
             formData.append("body", body);
 
-            const res = await fetch("/hono-note/backend/register", {
+            const res = await apiFetch("/hono-note/backend/register", {
                 method: "POST",
                 body: formData,
             });

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
+import { apiFetch } from "./lib/api";
 
 type NoteDetail = {
     id: number;
@@ -29,9 +30,7 @@ export default function EditNotePage() {
                     return;
                 }
 
-                const res = await fetch(`/hono-note/backend/note/detail?id=${id}`, {
-                    credentials: "include",
-                });
+                const res = await apiFetch(`/hono-note/backend/note/detail?id=${id}`);
 
                 const data = await res.json();
 
@@ -53,7 +52,7 @@ export default function EditNotePage() {
         };
 
         void loadNote();
-    }, []);
+    }, [id]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -69,10 +68,9 @@ export default function EditNotePage() {
             fd.append("title", title);
             fd.append("body", body);
 
-            const res = await fetch("/hono-note/backend/update", {
+            const res = await apiFetch("/hono-note/backend/update", {
                 method: "POST",
                 body: fd,
-                credentials: "include",
             });
 
             const data = await res.json();
